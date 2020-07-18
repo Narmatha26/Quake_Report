@@ -12,24 +12,28 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+ *  */
 package com.example.android.quakereport;
 
 import android.content.Intent;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.Loader;
 import java.util.ArrayList;
 import java.util.List;
 
-public class EarthquakeActivity extends AppCompatActivity {
+public class EarthquakeActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<List<Earthquake>> {
 
-    private EarthquakeAdapter mAdapter;
+    public EarthquakeAdapter mAdapter;
     public static final String LOG_TAG = EarthquakeActivity.class.getName();
+    private static final int EARTHQUAKE_LOADER_ID = 1;
     private static final String USGS_REQUEST_URL = "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&orderby=time&minmag=5&limit=10";
 
     @Override
@@ -57,29 +61,29 @@ public class EarthquakeActivity extends AppCompatActivity {
             }
         });
 
-        EarthquakeAsyncTask earthquakeAsyncTask = new EarthquakeAsyncTask();
-        earthquakeAsyncTask.execute(USGS_REQUEST_URL);
+        LoaderManager loaderManager = LoaderManager.getInstance(this);
+        loaderManager.initLoader(EARTHQUAKE_LOADER_ID, null, this);
 
     }
 
-    private class EarthquakeAsyncTask extends AsyncTask<String, Void, List<Earthquake>>{
+    @NonNull
+    @Override
+    public Loader<List<Earthquake>> onCreateLoader(int id, @Nullable Bundle args) {
+        return new EarthquakeLoader(EarthquakeActivity.this, USGS_REQUEST_URL);
+    }
 
-        @Override
-        protected List<Earthquake> doInBackground(String... urls) {
-            if(urls.length < 1 | urls[0] == null){
-                return null;
-            }
-            List<Earthquake> result = QueryUtils.fetchEarthquakeData(urls[0]);
-            return result;
-        }
-
-        @Override
-        protected void onPostExecute(List<Earthquake> data) {
-            mAdapter.clear();
-            if(data != null && !data.isEmpty()){
-                mAdapter.addAll(data);
-
-            }
+    @Override
+    public void onLoadFinished(@NonNull Loader<List<Earthquake>> loader, List<Earthquake> earthquakes) {
+        mAdapter.clear();
+        if (earthquakes != null && !earthquakes.isEmpty()) {
+            mAdapter.addAll(earthquakes);
         }
     }
+
+    @Override
+    public void onLoaderReset(@NonNull Loader<List<Earthquake>> loader) {
+        mAdapter.clear();
+    }
+
 }
+

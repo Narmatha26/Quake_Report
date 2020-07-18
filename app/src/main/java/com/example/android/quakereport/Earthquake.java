@@ -29,4 +29,5 @@ public class Earthquake {
     public String getUrl(){
         return mUrl;
     }
+
 }
