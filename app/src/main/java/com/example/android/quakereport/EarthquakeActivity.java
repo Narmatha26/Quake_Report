@@ -15,12 +15,18 @@
  *  */
 package com.example.android.quakereport;
 
+import android.content.Context;
 import android.content.Intent;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -34,6 +40,8 @@ public class EarthquakeActivity extends AppCompatActivity implements LoaderManag
     public EarthquakeAdapter mAdapter;
     public static final String LOG_TAG = EarthquakeActivity.class.getName();
     private static final int EARTHQUAKE_LOADER_ID = 1;
+    private NetworkInfo mNetworkInfo;
+    private TextView mEmptyStateTextView;
     private static final String USGS_REQUEST_URL = "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&orderby=time&minmag=5&limit=10";
 
     @Override
@@ -42,6 +50,9 @@ public class EarthquakeActivity extends AppCompatActivity implements LoaderManag
         setContentView(R.layout.earthquake_activity);
 
         ListView earthquakeListView = findViewById(R.id.list);
+
+        mEmptyStateTextView = findViewById(R.id.empty_view);
+        earthquakeListView.setEmptyView(mEmptyStateTextView);
 
         // Create a new {@link ArrayAdapter} of earthquakes
         mAdapter = new EarthquakeAdapter(this, new ArrayList<Earthquake>());
@@ -61,8 +72,18 @@ public class EarthquakeActivity extends AppCompatActivity implements LoaderManag
             }
         });
 
-        LoaderManager loaderManager = LoaderManager.getInstance(this);
-        loaderManager.initLoader(EARTHQUAKE_LOADER_ID, null, this);
+
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        mNetworkInfo = connectivityManager.getActiveNetworkInfo();
+
+        if(mNetworkInfo != null && mNetworkInfo.isConnected()) {
+            LoaderManager loaderManager = LoaderManager.getInstance(this);
+            loaderManager.initLoader(EARTHQUAKE_LOADER_ID, null, this);
+        } else{
+            View progressBar = findViewById(R.id.progress_bar);
+            progressBar.setVisibility(View.GONE);
+            mEmptyStateTextView.setText(R.string.no_internet_connection);
+        }
 
     }
 
@@ -70,14 +91,20 @@ public class EarthquakeActivity extends AppCompatActivity implements LoaderManag
     @Override
     public Loader<List<Earthquake>> onCreateLoader(int id, @Nullable Bundle args) {
         return new EarthquakeLoader(EarthquakeActivity.this, USGS_REQUEST_URL);
+
     }
 
     @Override
     public void onLoadFinished(@NonNull Loader<List<Earthquake>> loader, List<Earthquake> earthquakes) {
-        mAdapter.clear();
-        if (earthquakes != null && !earthquakes.isEmpty()) {
-            mAdapter.addAll(earthquakes);
-        }
+
+            View progressBar = findViewById(R.id.progress_bar);
+            progressBar.setVisibility(View.GONE);
+            mEmptyStateTextView.setText(R.string.empty_state);
+            mAdapter.clear();
+
+            if (earthquakes != null && !earthquakes.isEmpty()) {
+                mAdapter.addAll(earthquakes);
+            }
     }
 
     @Override
